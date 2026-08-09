@@ -8,6 +8,7 @@ const { Client } = require('ssh2');
 const { MAX_KEY_SIZE, validateConnection } = require('./config');
 
 const PORT = Number(process.env.PORT) || 3000;
+const PUBLIC_FILES = new Set(['/styles.css', '/app.js']);
 function send(socket, message) {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
 }
@@ -62,10 +63,17 @@ function attachTerminal(socket) {
 function createServer() {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
+  app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+  app.get([...PUBLIC_FILES], (req, res) => res.sendFile(path.join(__dirname, req.path)));
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
   const server = http.createServer(app);
-  const sockets = new WebSocketServer({ server, path: '/ssh', maxPayload: MAX_KEY_SIZE + 4096 });
+  const allowedOrigins = new Set((process.env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean));
+  const sockets = new WebSocketServer({
+    server,
+    path: '/ssh',
+    maxPayload: MAX_KEY_SIZE + 4096,
+    verifyClient: ({ origin }, done) => done(allowedOrigins.size === 0 || allowedOrigins.has(origin), 403, 'Origin not allowed')
+  });
   sockets.on('connection', attachTerminal);
   return server;
 }
