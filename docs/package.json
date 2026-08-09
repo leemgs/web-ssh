@@ -1,0 +1,17 @@
+{
+  "name": "web-ssh-terminal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "브라우저에서 사용하는 안전한 SSH 터미널",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "express": "^5.1.0",
+    "ssh2": "^1.17.0",
+    "ws": "^8.18.3"
+  }
+}
