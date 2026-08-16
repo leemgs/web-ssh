@@ -5,6 +5,7 @@ const keyInput = document.querySelector('#key');
 const errorBox = document.querySelector('#error');
 const status = document.querySelector('#status');
 const section = document.querySelector('#terminal-section');
+const connectButton = document.querySelector('#connect');
 let socket;
 let terminal;
 let fit;
@@ -15,6 +16,7 @@ gatewayInput.value = new URLSearchParams(location.search).get('gateway') || loca
 
 keyInput.addEventListener('change', () => {
   document.querySelector('#key-name').textContent = keyInput.files[0]?.name || 'SSH 인증서 / 개인 키 업로드';
+  document.querySelector('#passphrase-field').hidden = !keyInput.files[0];
 });
 
 const readKey = (file) => file ? file.text() : Promise.resolve('');
@@ -27,22 +29,40 @@ form.addEventListener('submit', async (event) => {
   if (!gateway || !/^wss?:\/\//i.test(gateway)) return errorBox.textContent = 'GitHub Pages에서 사용할 SSH 중계 서버(wss://) 주소를 입력해 주세요.';
   if (location.protocol === 'https:' && !gateway.startsWith('wss://')) return errorBox.textContent = 'HTTPS 페이지에서는 보안 중계 서버(wss://)만 사용할 수 있습니다.';
   localStorage.setItem('orbit-ssh-gateway', gateway);
+  socket?.close();
+  connectButton.disabled = true;
   status.textContent = '연결 중';
   socket = new WebSocket(gateway);
   socket.addEventListener('open', async () => socket.send(JSON.stringify({
     type: 'connect', host: form.host.value, port: form.port.value,
     username: form.username.value, password: form.password.value,
-    privateKey: await readKey(keyInput.files[0])
+    privateKey: await readKey(keyInput.files[0]), passphrase: form.passphrase.value
   })));
-  socket.addEventListener('message', ({ data }) => handleMessage(JSON.parse(data)));
-  socket.addEventListener('close', () => { status.textContent = '연결 종료'; terminal?.writeln('\r\n\x1b[33m[세션이 종료되었습니다]\x1b[0m'); });
-  socket.addEventListener('error', () => { errorBox.textContent = '서버에 연결할 수 없습니다.'; status.textContent = '오류'; });
+  socket.addEventListener('message', ({ data }) => {
+    try { handleMessage(JSON.parse(data)); } catch { errorBox.textContent = '중계 서버가 올바르지 않은 응답을 보냈습니다.'; }
+  });
+  socket.addEventListener('close', () => {
+    connectButton.disabled = false;
+    status.textContent = '연결 종료';
+    terminal?.writeln('\r\n\x1b[33m[세션이 종료되었습니다]\x1b[0m');
+  });
+  socket.addEventListener('error', () => {
+    connectButton.disabled = false;
+    errorBox.textContent = '중계 서버에 연결할 수 없습니다. 주소와 서버 상태를 확인해 주세요.';
+    status.textContent = '오류';
+  });
 });
 
 function handleMessage(message) {
-  if (message.type === 'error') { errorBox.textContent = message.message; status.textContent = '오류'; return; }
+  if (message.type === 'error') {
+    errorBox.textContent = message.message;
+    status.textContent = '오류';
+    connectButton.disabled = false;
+    return;
+  }
   if (message.type === 'ready') {
     status.textContent = '연결됨';
+    connectButton.disabled = false;
     section.hidden = false;
     document.querySelector('#session-title').textContent = `${form.username.value}@${form.host.value}:${form.port.value}`;
     if (!terminal) {
@@ -53,6 +73,7 @@ function handleMessage(message) {
     fit.fit(); terminal.focus(); section.scrollIntoView({ behavior: 'smooth' }); resize();
   }
   if (message.type === 'data') terminal?.write(message.data);
+  if (message.type === 'closed') socket?.close();
 }
 
 function resize() { if (terminal && socket?.readyState === WebSocket.OPEN) { fit.fit(); socket.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows })); } }

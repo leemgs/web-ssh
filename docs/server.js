@@ -23,6 +23,7 @@ function attachTerminal(socket) {
     client?.end();
     stream = undefined;
     client = undefined;
+    connected = false;
   };
 
   socket.on('message', (buffer) => {
@@ -34,10 +35,16 @@ function attachTerminal(socket) {
       let config;
       try { config = validateConnection(message); } catch (error) { return send(socket, { type: 'error', message: error.message }); }
       client = new Client();
+      client.on('keyboard-interactive', (_name, _instructions, _lang, prompts, finish) => {
+        finish(prompts.map(() => config.password || ''));
+      });
       client.once('ready', () => {
         connected = true;
         client.shell({ term: 'xterm-256color', cols: 100, rows: 30 }, (error, shell) => {
-          if (error) return send(socket, { type: 'error', message: `터미널을 열 수 없습니다: ${error.message}` });
+          if (error) {
+            send(socket, { type: 'error', message: `터미널을 열 수 없습니다: ${error.message}` });
+            return close();
+          }
           stream = shell;
           send(socket, { type: 'ready' });
           shell.on('data', (data) => send(socket, { type: 'data', data: data.toString('utf8') }));
@@ -49,7 +56,7 @@ function attachTerminal(socket) {
       client.connect(config);
       return;
     }
-    if (message.type === 'input' && stream) stream.write(String(message.data || ''));
+    if (message.type === 'input' && stream) stream.write(String(message.data || '').slice(0, 64 * 1024));
     if (message.type === 'resize' && stream) {
       const cols = Math.max(20, Math.min(500, Number(message.cols) || 80));
       const rows = Math.max(5, Math.min(200, Number(message.rows) || 24));

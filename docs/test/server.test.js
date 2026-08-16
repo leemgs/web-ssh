@@ -5,7 +5,9 @@ const { validateConnection } = require('../config');
 
 test('validates and normalizes connection details', () => {
   assert.deepEqual(validateConnection({ host: ' server.local ', username: 'root', password: 'secret', port: '2222' }), {
-    host: 'server.local', username: 'root', password: 'secret', privateKey: undefined, port: 2222, readyTimeout: 15000
+    host: 'server.local', username: 'root', password: 'secret', privateKey: undefined,
+    passphrase: undefined, port: 2222, readyTimeout: 15000,
+    keepaliveInterval: 10000, keepaliveCountMax: 3, tryKeyboard: true
   });
 });
 test('rejects invalid connection details', () => {
