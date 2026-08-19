@@ -29,7 +29,17 @@
       </form>
     </section>
     <section id="terminal-section" class="terminal-wrap" hidden>
-      <div class="terminal-bar"><div><i></i><i></i><i></i></div><span id="session-title">SSH SESSION</span><button id="disconnect" type="button">연결 종료</button></div>
+      <div class="terminal-bar">
+        <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+        <span id="session-title">SSH SESSION</span>
+        <div class="terminal-actions">
+          <button id="copy" type="button" title="선택한 내용 복사">복사</button>
+          <button id="paste" type="button" title="클립보드 붙여넣기">붙여넣기</button>
+          <button id="clear" type="button" title="터미널 화면 지우기">지우기</button>
+          <button id="fullscreen" type="button" title="전체 화면">전체 화면</button>
+          <button id="disconnect" class="danger" type="button">연결 종료</button>
+        </div>
+      </div>
       <div id="terminal"></div>
     </section>
     <footer><span>© 2026 ORBIT SSH</span><span>NO CREDENTIALS STORED · ENCRYPTED SSH TRANSPORT</span></footer>

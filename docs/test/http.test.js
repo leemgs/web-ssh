@@ -1,0 +1,23 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { createServer } = require('../server');
+
+test('serves the application and health endpoint', async (context) => {
+  const server = createServer();
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  context.after(() => new Promise(resolve => server.close(resolve)));
+
+  const { port } = server.address();
+  const health = await fetch(`http://127.0.0.1:${port}/health`);
+  assert.equal(health.status, 200);
+  assert.deepEqual(await health.json(), { status: 'ok' });
+
+  const home = await fetch(`http://127.0.0.1:${port}/`);
+  assert.equal(home.status, 200);
+  assert.match(await home.text(), /새 SSH 연결/);
+});

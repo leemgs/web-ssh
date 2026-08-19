@@ -9,6 +9,7 @@ const connectButton = document.querySelector('#connect');
 let socket;
 let terminal;
 let fit;
+let connectionSequence = 0;
 
 const defaultGateway = location.hostname.endsWith('github.io') ? '' : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ssh`;
 const gatewayInput = document.querySelector('#gateway');
@@ -30,23 +31,35 @@ form.addEventListener('submit', async (event) => {
   if (location.protocol === 'https:' && !gateway.startsWith('wss://')) return errorBox.textContent = 'HTTPS 페이지에서는 보안 중계 서버(wss://)만 사용할 수 있습니다.';
   localStorage.setItem('orbit-ssh-gateway', gateway);
   socket?.close();
+  const sequence = ++connectionSequence;
   connectButton.disabled = true;
   status.textContent = '연결 중';
-  socket = new WebSocket(gateway);
-  socket.addEventListener('open', async () => socket.send(JSON.stringify({
+  const connection = new WebSocket(gateway);
+  socket = connection;
+  const connectionTimeout = window.setTimeout(() => {
+    if (connection.readyState === WebSocket.CONNECTING) connection.close();
+  }, 15_000);
+  connection.addEventListener('open', async () => {
+    window.clearTimeout(connectionTimeout);
+    connection.send(JSON.stringify({
     type: 'connect', host: form.host.value, port: form.port.value,
     username: form.username.value, password: form.password.value,
     privateKey: await readKey(keyInput.files[0]), passphrase: form.passphrase.value
-  })));
-  socket.addEventListener('message', ({ data }) => {
+    }));
+  });
+  connection.addEventListener('message', ({ data }) => {
+    if (sequence !== connectionSequence) return;
     try { handleMessage(JSON.parse(data)); } catch { errorBox.textContent = '중계 서버가 올바르지 않은 응답을 보냈습니다.'; }
   });
-  socket.addEventListener('close', () => {
+  connection.addEventListener('close', () => {
+    window.clearTimeout(connectionTimeout);
+    if (sequence !== connectionSequence) return;
     connectButton.disabled = false;
     status.textContent = '연결 종료';
     terminal?.writeln('\r\n\x1b[33m[세션이 종료되었습니다]\x1b[0m');
   });
-  socket.addEventListener('error', () => {
+  connection.addEventListener('error', () => {
+    if (sequence !== connectionSequence) return;
     connectButton.disabled = false;
     errorBox.textContent = '중계 서버에 연결할 수 없습니다. 주소와 서버 상태를 확인해 주세요.';
     status.textContent = '오류';
@@ -79,3 +92,20 @@ function handleMessage(message) {
 function resize() { if (terminal && socket?.readyState === WebSocket.OPEN) { fit.fit(); socket.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows })); } }
 window.addEventListener('resize', resize);
 document.querySelector('#disconnect').addEventListener('click', () => { socket?.send(JSON.stringify({ type: 'disconnect' })); socket?.close(); });
+document.querySelector('#clear').addEventListener('click', () => terminal?.clear());
+document.querySelector('#copy').addEventListener('click', async () => {
+  const selection = terminal?.getSelection();
+  if (selection) await navigator.clipboard.writeText(selection);
+  terminal?.focus();
+});
+document.querySelector('#paste').addEventListener('click', async () => {
+  const content = await navigator.clipboard.readText();
+  if (content && socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'input', data: content }));
+  terminal?.focus();
+});
+document.querySelector('#fullscreen').addEventListener('click', async () => {
+  if (document.fullscreenElement) await document.exitFullscreen();
+  else await section.requestFullscreen();
+  window.setTimeout(resize, 50);
+});
+document.addEventListener('fullscreenchange', resize);
