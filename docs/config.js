@@ -2,8 +2,10 @@
 
 const CONNECT_TIMEOUT = 15_000;
 const MAX_KEY_SIZE = 1024 * 1024;
+const MAX_CREDENTIAL_SIZE = 16 * 1024;
 
 function validateConnection(raw = {}) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('올바른 SSH 접속 정보가 필요합니다.');
   const host = String(raw.host || '').trim();
   const username = String(raw.username || '').trim();
   const port = Number(raw.port || 22);
@@ -14,6 +16,8 @@ function validateConnection(raw = {}) {
   if (!username || username.length > 128) throw new Error('SSH 아이디를 입력해 주세요.');
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('포트는 1~65535 사이여야 합니다.');
   if (!password && !privateKey) throw new Error('비밀번호 또는 개인 키가 필요합니다.');
+  if (password && Buffer.byteLength(password) > MAX_CREDENTIAL_SIZE) throw new Error('비밀번호가 너무 깁니다.');
+  if (passphrase && Buffer.byteLength(passphrase) > MAX_CREDENTIAL_SIZE) throw new Error('개인 키 암호가 너무 깁니다.');
   if (privateKey && Buffer.byteLength(privateKey) > MAX_KEY_SIZE) throw new Error('개인 키는 1MB 이하여야 합니다.');
   return {
     host, port, username, password, privateKey, passphrase,
@@ -24,4 +28,4 @@ function validateConnection(raw = {}) {
   };
 }
 
-module.exports = { CONNECT_TIMEOUT, MAX_KEY_SIZE, validateConnection };
+module.exports = { CONNECT_TIMEOUT, MAX_CREDENTIAL_SIZE, MAX_KEY_SIZE, validateConnection };

@@ -41,11 +41,18 @@ form.addEventListener('submit', async (event) => {
   }, 15_000);
   connection.addEventListener('open', async () => {
     window.clearTimeout(connectionTimeout);
-    connection.send(JSON.stringify({
-    type: 'connect', host: form.host.value, port: form.port.value,
-    username: form.username.value, password: form.password.value,
-    privateKey: await readKey(keyInput.files[0]), passphrase: form.passphrase.value
-    }));
+    try {
+      const privateKey = await readKey(keyInput.files[0]);
+      if (connection.readyState !== WebSocket.OPEN || sequence !== connectionSequence) return;
+      connection.send(JSON.stringify({
+        type: 'connect', host: form.host.value, port: form.port.value,
+        username: form.username.value, password: form.password.value,
+        privateKey, passphrase: form.passphrase.value
+      }));
+    } catch {
+      errorBox.textContent = '개인 키 파일을 읽을 수 없습니다.';
+      connection.close();
+    }
   });
   connection.addEventListener('message', ({ data }) => {
     if (sequence !== connectionSequence) return;
@@ -95,17 +102,23 @@ document.querySelector('#disconnect').addEventListener('click', () => { socket?.
 document.querySelector('#clear').addEventListener('click', () => terminal?.clear());
 document.querySelector('#copy').addEventListener('click', async () => {
   const selection = terminal?.getSelection();
-  if (selection) await navigator.clipboard.writeText(selection);
+  try {
+    if (selection) await navigator.clipboard.writeText(selection);
+  } catch { errorBox.textContent = '클립보드 복사 권한을 확인해 주세요.'; }
   terminal?.focus();
 });
 document.querySelector('#paste').addEventListener('click', async () => {
-  const content = await navigator.clipboard.readText();
-  if (content && socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'input', data: content }));
+  try {
+    const content = await navigator.clipboard.readText();
+    if (content && socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'input', data: content }));
+  } catch { errorBox.textContent = '클립보드 붙여넣기 권한을 확인해 주세요.'; }
   terminal?.focus();
 });
 document.querySelector('#fullscreen').addEventListener('click', async () => {
-  if (document.fullscreenElement) await document.exitFullscreen();
-  else await section.requestFullscreen();
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await section.requestFullscreen();
+  } catch { errorBox.textContent = '전체 화면을 시작할 수 없습니다.'; }
   window.setTimeout(resize, 50);
 });
 document.addEventListener('fullscreenchange', resize);
