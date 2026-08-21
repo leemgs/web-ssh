@@ -23,3 +23,5 @@ ALLOWED_ORIGINS=https://leemgs.github.io npm start
 ```
 
 그 다음 홈페이지의 **고급 설정 → SSH 중계 서버 주소**에 `wss://배포한-서버/ssh`를 입력합니다. 주소는 브라우저에만 저장되며 URL의 `?gateway=wss://...` 매개변수로 미리 지정할 수도 있습니다. 중계 서버에는 반드시 TLS, 인증/접근 제어, 연결 속도 제한과 대상 네트워크 방화벽을 적용해야 합니다.
+
+Ubuntu 24.04 서버에서 systemd, Nginx와 Let's Encrypt를 이용해 WSS/WS 중계 서버를 배포하는 전체 과정은 [WSS/WS 중계 서버 구축 매뉴얼](../documents/wss-ws-setup.md)을 참고하세요.
