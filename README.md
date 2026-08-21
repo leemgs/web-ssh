@@ -1,4 +1,4 @@
-# Orbit SSH
+# ORBIT (Web SSH)
 
 브라우저와 대상 서버 사이에서 Node.js 중계 서버를 사용하는 웹 SSH 터미널입니다. 웹 앱과 로컬 개발 방법은 [`docs/README.md`](docs/README.md)를 참고하세요.
 
