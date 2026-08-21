@@ -1,4 +1,4 @@
-# Ubuntu 24.04 WSS/WS 중계 서버 구축
+# Ubuntu 24.04 + Nginx WSS/WS 중계 서버 구축
 
 이 저장소에는 SSH 중계 서버가 이미 구현되어 있으므로 새 `server.js`를 만들 필요가 없습니다. `docs/server.js`는 `/ssh` WebSocket 경로에서 브라우저의 `connect`, `input`, `resize`, `disconnect` 메시지를 처리하며 비밀번호, 개인 키, passphrase, keyboard-interactive 인증을 지원합니다.
 
@@ -11,10 +11,17 @@ sudo apt update
 sudo apt install -y git nodejs npm nginx certbot python3-certbot-nginx
 ```
 
-이 프로젝트는 Node.js 20 이상이 필요합니다. 설치 후 버전을 확인하고, 20 미만이면 Node.js 공식 배포판 등으로 업그레이드하세요.
+이 프로젝트는 Node.js 20 이상이 필요합니다. Ubuntu 저장소에서 설치한 버전이 이 조건을 충족하는지 반드시 확인하세요.
 
 ```bash
 node --version
+```
+
+출력된 메이저 버전이 20 미만이면 이 상태로 진행하지 말고 [Node.js 공식 설치 안내](https://nodejs.org/en/download)를 따라 LTS 버전으로 교체한 다음 다시 확인합니다. systemd에서 사용할 실행 파일 경로도 함께 확인하세요.
+
+```bash
+command -v node
+command -v npm
 ```
 
 저장소를 받고 의존성을 설치합니다.
@@ -23,7 +30,7 @@ node --version
 cd ~
 git clone https://github.com/leemgs/web-ssh.git
 cd web-ssh/docs
-npm install
+npm ci
 ```
 
 ## 2. 중계 서버 직접 실행 및 확인
@@ -84,7 +91,7 @@ RestartSec=3
 WantedBy=multi-user.target
 ```
 
-`User=invain`과 `/home/invain/...`은 실제 계정 및 경로로 변경합니다. 현재 계정은 다음 명령으로 확인할 수 있습니다.
+`User=invain`과 `/home/invain/...`은 실제 계정 및 경로로 변경합니다. `ExecStart` 역시 앞에서 `command -v npm`으로 확인한 절대 경로와 다르면 수정해야 합니다. 현재 계정은 다음 명령으로 확인할 수 있습니다.
 
 ```bash
 whoami
@@ -146,7 +153,13 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-같은 이름의 심볼릭 링크가 이미 있으면 `ln` 명령은 생략합니다.
+같은 이름의 심볼릭 링크가 이미 있으면 `ln` 명령은 생략합니다. Ubuntu 기본 사이트가 같은 도메인이나 포트를 선점해 충돌한다면 `sudo a2dissite`가 아니라 다음 Nginx 명령으로 기본 사이트를 비활성화한 뒤 설정을 다시 검사합니다.
+
+```bash
+sudo unlink /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
+```
 
 ## 5. TLS 인증서 설치
 

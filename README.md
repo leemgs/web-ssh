@@ -4,6 +4,7 @@
 
 ## 배포 문서
 
-- [Ubuntu 24.04에서 WSS/WS 중계 서버 구축](documents/wss-ws-setup.md)
+- [Ubuntu 24.04 + Nginx에서 WSS/WS 중계 서버 구축](documents/wss-ws-setup.md)
+- [Ubuntu 24.04 + Apache에서 WSS/WS 중계 서버 구축](documents/wss-ws-apache-setup.md)
 
-배포 문서에는 기존 `docs/server.js`를 systemd로 실행하고, Nginx와 Let's Encrypt를 이용해 `wss://` 엔드포인트를 구성하는 방법이 정리되어 있습니다.
+두 문서 모두 기존 `docs/server.js`를 systemd 서비스로 실행하고, 선택한 웹 서버와 Let's Encrypt를 이용해 `wss://` 엔드포인트를 구성하는 과정을 설명합니다.
