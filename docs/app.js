@@ -11,7 +11,9 @@ let terminal;
 let fit;
 let connectionSequence = 0;
 
-const defaultGateway = location.hostname.endsWith('github.io') ? '' : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ssh`;
+const defaultGateway = location.hostname.endsWith('github.io')
+  ? 'wss://leemgs.mooo.com/ssh'
+  : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ssh`;
 const gatewayInput = document.querySelector('#gateway');
 gatewayInput.value = new URLSearchParams(location.search).get('gateway') || localStorage.getItem('orbit-ssh-gateway') || defaultGateway;
 

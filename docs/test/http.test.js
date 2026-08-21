@@ -19,5 +19,11 @@ test('serves the application and health endpoint', async (context) => {
 
   const home = await fetch(`http://127.0.0.1:${port}/`);
   assert.equal(home.status, 200);
-  assert.match(await home.text(), /새 SSH 연결/);
+  const markup = await home.text();
+  assert.match(markup, /새 SSH 연결/);
+  assert.match(markup, /id="host"[^>]+value="leemgs\.mooo\.com"/);
+
+  const app = await fetch(`http://127.0.0.1:${port}/app.js`);
+  assert.equal(app.status, 200);
+  assert.match(await app.text(), /wss:\/\/leemgs\.mooo\.com\/ssh/);
 });
