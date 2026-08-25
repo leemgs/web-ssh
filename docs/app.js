@@ -6,6 +6,8 @@ const errorBox = document.querySelector('#error');
 const status = document.querySelector('#status');
 const section = document.querySelector('#terminal-section');
 const connectButton = document.querySelector('#connect');
+const hostInput = document.querySelector('#host');
+const hostPresets = document.querySelectorAll('[data-host]');
 let socket;
 let terminal;
 let fit;
@@ -16,6 +18,19 @@ const defaultGateway = location.hostname.endsWith('github.io')
   : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ssh`;
 const gatewayInput = document.querySelector('#gateway');
 gatewayInput.value = new URLSearchParams(location.search).get('gateway') || localStorage.getItem('orbit-ssh-gateway') || defaultGateway;
+
+function syncHostPreset() {
+  hostPresets.forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.host === hostInput.value.trim()));
+  });
+}
+
+hostPresets.forEach((button) => button.addEventListener('click', () => {
+  hostInput.value = button.dataset.host;
+  syncHostPreset();
+  hostInput.focus();
+}));
+hostInput.addEventListener('input', syncHostPreset);
 
 keyInput.addEventListener('change', () => {
   document.querySelector('#key-name').textContent = keyInput.files[0]?.name || 'SSH 인증서 / 개인 키 업로드';
