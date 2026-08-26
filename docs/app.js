@@ -1,4 +1,4 @@
-/* global Terminal, FitAddon */
+/* global Terminal, FitAddon, KeyVault */
 'use strict';
 const form = document.querySelector('#connect-form');
 const keyInput = document.querySelector('#key');
@@ -8,10 +8,14 @@ const section = document.querySelector('#terminal-section');
 const connectButton = document.querySelector('#connect');
 const hostInput = document.querySelector('#host');
 const hostPresets = document.querySelectorAll('[data-host]');
+const rememberKey = document.querySelector('#remember-key');
+const savedKeyRow = document.querySelector('#saved-key-row');
+const savedKeyName = document.querySelector('#saved-key-name');
 let socket;
 let terminal;
 let fit;
 let connectionSequence = 0;
+let storedKey;
 
 const defaultGateway = location.hostname.endsWith('github.io')
   ? 'wss://leemgs.mooo.com/ssh'
@@ -37,6 +41,31 @@ keyInput.addEventListener('change', () => {
   document.querySelector('#passphrase-field').hidden = !keyInput.files[0];
 });
 
+function showStoredKey(record) {
+  storedKey = record;
+  savedKeyRow.hidden = !record;
+  savedKeyName.textContent = record?.name || '';
+  if (record && !keyInput.files[0]) {
+    document.querySelector('#key-name').textContent = `${record.name} (저장됨)`;
+    document.querySelector('#passphrase-field').hidden = false;
+  }
+}
+
+KeyVault.load().then(showStoredKey).catch(() => {
+  document.querySelector('#key-vault').hidden = true;
+});
+
+document.querySelector('#forget-key').addEventListener('click', async () => {
+  try {
+    await KeyVault.remove();
+    showStoredKey(null);
+    document.querySelector('#key-name').textContent = keyInput.files[0]?.name || 'SSH 인증서 / 개인 키 업로드';
+    document.querySelector('#passphrase-field').hidden = !keyInput.files[0];
+  } catch {
+    errorBox.textContent = '저장된 개인 키를 삭제할 수 없습니다.';
+  }
+});
+
 const readKey = (file) => file ? file.text() : Promise.resolve('');
 
 form.addEventListener('submit', async (event) => {
@@ -59,7 +88,12 @@ form.addEventListener('submit', async (event) => {
   connection.addEventListener('open', async () => {
     window.clearTimeout(connectionTimeout);
     try {
-      const privateKey = await readKey(keyInput.files[0]);
+      const uploadedKey = await readKey(keyInput.files[0]);
+      const privateKey = uploadedKey || storedKey?.privateKey || '';
+      if (uploadedKey && rememberKey.checked) {
+        await KeyVault.save(keyInput.files[0].name, uploadedKey);
+        showStoredKey({ name: keyInput.files[0].name, privateKey: uploadedKey });
+      }
       if (connection.readyState !== WebSocket.OPEN || sequence !== connectionSequence) return;
       connection.send(JSON.stringify({
         type: 'connect', host: form.host.value, port: form.port.value,

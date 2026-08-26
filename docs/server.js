@@ -8,7 +8,7 @@ const { Client } = require('ssh2');
 const { MAX_KEY_SIZE, validateConnection } = require('./config');
 
 const PORT = Number(process.env.PORT) || 3000;
-const PUBLIC_FILES = new Set(['/styles.css', '/app.js']);
+const PUBLIC_FILES = new Set(['/styles.css', '/app.js', '/key-vault.js']);
 function send(socket, message) {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
 }
